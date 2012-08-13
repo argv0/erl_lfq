@@ -19,8 +19,10 @@
 -module(erl_lfq).
 -export([queue_new/0,
          queue_in/2,
-         queue_out/1]).
--compile(export_all).
+         queue_out/1,
+         queue_byte_size/1,
+         queue_len/1]).
+
 -on_load(init/0).
 
 -define(nif_stub, nif_stub_error(?LINE)).
@@ -50,6 +52,12 @@ queue_in(_Q, _Item) ->
     ?nif_stub.
 
 queue_out(_Q) ->
+    ?nif_stub.
+
+queue_byte_size(_Q) ->
+    ?nif_stub.
+
+queue_len(_Q) ->
     ?nif_stub.
 
 -ifdef(TEST).

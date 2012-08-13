@@ -27,6 +27,8 @@ extern "C" {
 ERL_NIF_TERM queue_new(ErlNifEnv*, int, const ERL_NIF_TERM[]);
 ERL_NIF_TERM queue_in(ErlNifEnv*, int, const ERL_NIF_TERM[]);
 ERL_NIF_TERM queue_out(ErlNifEnv*, int, const ERL_NIF_TERM[]);
+ERL_NIF_TERM queue_byte_size(ErlNifEnv*, int, const ERL_NIF_TERM[]);
+ERL_NIF_TERM queue_len(ErlNifEnv*, int, const ERL_NIF_TERM[]);
 
 } // extern "C"
 

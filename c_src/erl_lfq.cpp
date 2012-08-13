@@ -28,6 +28,8 @@ static ErlNifResourceType* queue_RESOURCE;
 struct queue_handle
 {
     lockfree_queue<ErlNifBinary> *q;
+    uint64_t byte_size;
+    uint64_t item_count;
 };
 
 
@@ -42,7 +44,9 @@ static ErlNifFunc nif_funcs[] =
 {
     {"queue_new", 0, queue_new},
     {"queue_in", 2, queue_in},
-    {"queue_out", 1, queue_out}
+    {"queue_out", 1, queue_out},
+    {"queue_byte_size", 1, queue_byte_size},
+    {"queue_len", 1, queue_len}
 };
 
 #define ATOM(Id, Value) { Id = enif_make_atom(env, Value); }
@@ -71,6 +75,8 @@ ERL_NIF_TERM queue_in(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         enif_alloc_binary(item.size, &newbin);
         memcpy(newbin.data, item.data, item.size);
         handle->q->produce(newbin);
+        __sync_add_and_fetch(&(handle->byte_size), item.size);
+        __sync_add_and_fetch(&(handle->item_count), 1);
         return ATOM_OK;
     }
     else 
@@ -88,12 +94,34 @@ ERL_NIF_TERM queue_out(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     {
         if (handle->q->consume(item))
         {
+            __sync_sub_and_fetch(&(handle->byte_size), item.size);
+            __sync_sub_and_fetch(&(handle->item_count), 1);
             return enif_make_binary(env, &item);
         }
         else
         {
             return ATOM_EMPTY;
         }
+    }
+    return enif_make_badarg(env);
+}
+
+ERL_NIF_TERM queue_byte_size(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    queue_handle *handle = 0;
+    if (enif_get_resource(env,argv[0],queue_RESOURCE,(void**)&handle));
+    {
+        return enif_make_int64(env, handle->byte_size);
+    }
+    return enif_make_badarg(env);
+}
+
+ERL_NIF_TERM queue_len(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    queue_handle *handle = 0;
+    if (enif_get_resource(env,argv[0],queue_RESOURCE,(void**)&handle));
+    {
+        return enif_make_int64(env, handle->item_count);
     }
     return enif_make_badarg(env);
 }
