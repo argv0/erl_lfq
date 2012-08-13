@@ -1,5 +1,5 @@
 %% -------------------------------------------------------------------
-%% Copyright (c) 2007-2011 Basho Technologies, Inc.  All Rights Reserved.
+%% Copyright (c) 2007-2012 Basho Technologies, Inc.  All Rights Reserved.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -17,11 +17,11 @@
 %%
 %% -------------------------------------------------------------------
 -module(erl_lfq).
--export([queue_new/0,
-         queue_in/2,
-         queue_out/1,
-         queue_byte_size/1,
-         queue_len/1]).
+-export([new/0,
+         in/2,
+         out/1,
+         byte_size/1,
+         len/1]).
 
 -on_load(init/0).
 
@@ -45,32 +45,32 @@ init() ->
     erlang:load_nif(filename:join(PrivDir, ?MODULE), 0).
 
 
-queue_new() ->
+new() ->
     ?nif_stub.
 
-queue_in(_Q, _Item) ->
+in(_Q, _Item) ->
     ?nif_stub.
 
-queue_out(_Q) ->
+out(_Q) ->
     ?nif_stub.
 
-queue_byte_size(_Q) ->
+byte_size(_Q) ->
     ?nif_stub.
 
-queue_len(_Q) ->
+len(_Q) ->
     ?nif_stub.
 
 -ifdef(TEST).
 
 queue_test() ->
-    {ok, Q} = ?MODULE:queue_new(),
-    ok = ?MODULE:queue_in(Q, <<"foo">>),
-    ok = ?MODULE:queue_in(Q, <<"bar">>),
-    <<"foo">> = ?MODULE:queue_out(Q),
-    <<"bar">> = ?MODULE:queue_out(Q).
+    {ok, Q} = ?MODULE:new(),
+    ok = ?MODULE:in(Q, <<"foo">>),
+    ok = ?MODULE:in(Q, <<"bar">>),
+    <<"foo">> = ?MODULE:out(Q),
+    <<"bar">> = ?MODULE:out(Q).
 
 producer_consumer_test() ->
-    {ok, Q} = ?MODULE:queue_new(),
+    {ok, Q} = ?MODULE:new(),
     PPid = self(),
     spawn(fun() -> producer_loop(Q, 0) end),
     spawn(fun() -> consumer_loop(Q, PPid) end),
@@ -80,10 +80,10 @@ producer_consumer_test() ->
     end.
 
 consumer_loop(Q, PPid) ->
-    R = ?MODULE:queue_out(Q),
+    R = ?MODULE:out(Q),
     case R of
         <<100000:32/integer>> ->
-            empty = ?MODULE:queue_out(Q),
+            empty = ?MODULE:out(Q),
             PPid ! consumer_done,
             done;
         _ ->
@@ -93,7 +93,7 @@ consumer_loop(Q, PPid) ->
 producer_loop(_Q, Count) when Count > 100000 ->
     ok;
 producer_loop(Q, Count) ->    
-    ?MODULE:queue_in(Q, <<Count:32/integer>>),
+    ?MODULE:in(Q, <<Count:32/integer>>),
     producer_loop(Q, Count+1).
 
 -endif.

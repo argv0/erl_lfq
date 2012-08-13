@@ -1,6 +1,6 @@
 // -------------------------------------------------------------------
 //
-// Copyright (c) 2011 Basho Technologies, Inc. All Rights Reserved.
+// Copyright (c) 2007-2012 Basho Technologies, Inc. All Rights Reserved.
 //
 // This file is provided to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file
@@ -42,11 +42,11 @@ static ERL_NIF_TERM ATOM_EMPTY;
 
 static ErlNifFunc nif_funcs[] =
 {
-    {"queue_new", 0, queue_new},
-    {"queue_in", 2, queue_in},
-    {"queue_out", 1, queue_out},
-    {"queue_byte_size", 1, queue_byte_size},
-    {"queue_len", 1, queue_len}
+    {"new", 0, queue_new},
+    {"in", 2, queue_in},
+    {"out", 1, queue_out},
+    {"byte_size", 1, queue_byte_size},
+    {"len", 1, queue_len}
 };
 
 #define ATOM(Id, Value) { Id = enif_make_atom(env, Value); }
