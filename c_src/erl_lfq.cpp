@@ -55,12 +55,12 @@ static ErlNifFunc nif_funcs[] =
 ERL_NIF_TERM queue_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     queue_handle *handle = 
-        (queue_handle *)enif_alloc_resource(queue_RESOURCE,
-                                            sizeof(queue_handle));
+        (queue_handle *)enif_alloc_resource_compat(env, queue_RESOURCE,
+                                                   sizeof(queue_handle));
     memset(handle, '\0', sizeof(queue_handle));
     handle->q = new lockfree_queue<ErlNifBinary>();
     ERL_NIF_TERM result = enif_make_resource(env, handle);
-    enif_release_resource(handle);
+    enif_release_resource_compat(env, handle);
     return enif_make_tuple2(env, ATOM_OK, result);
 }
 
@@ -72,7 +72,7 @@ ERL_NIF_TERM queue_in(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         enif_inspect_binary(env, argv[1], &item))
     {
         ErlNifBinary newbin;
-        enif_alloc_binary(item.size, &newbin);
+        enif_alloc_binary_compat(env, item.size, &newbin);
         memcpy(newbin.data, item.data, item.size);
         handle->q->produce(newbin);
         __sync_add_and_fetch(&(handle->byte_size), item.size);
@@ -137,12 +137,11 @@ static int on_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
     ErlNifResourceFlags flags = (ErlNifResourceFlags)
         (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER);
-    queue_RESOURCE = enif_open_resource_type(env, 
-                                                 NULL, 
-                                                 "queue_resource",
-                                                 &queue_resource_cleanup,
-                                                 flags, 
-                                                 NULL);
+    queue_RESOURCE = enif_open_resource_type_compat(env, 
+                                                    "queue_resource",
+                                                    &queue_resource_cleanup,
+                                                    flags, 
+                                                    NULL);
     // Initialize common atoms
     ATOM(ATOM_OK, "ok");
     ATOM(ATOM_ERROR, "error");
