@@ -18,24 +18,28 @@
 //
 // -------------------------------------------------------------------
 
-#include "atomic_pointer.h"
+inline void memory_barrier() { __sync_synchronize(); }
 
 template <typename T>
 class atomic_pointer
 {
 public:
     atomic_pointer() {}
-    explicit atomic_pointer(T p) 
-    : ptr_(p) {}
+    explicit atomic_pointer(T* p) : ptr_(p) {}
 public:
-    inline T load() const { 
-        return static_cast<T>(ptr_.Acquire_Load());
+    inline T* load() const 
+    { 
+        T* result = ptr_;
+        memory_barrier();
+        return result;
     }
-    inline void store(T p) {
-        ptr_.Release_Store(p);
+    inline void store(T* p) 
+    {
+        memory_barrier();
+        ptr_ = p;
     }
 private:
-    leveldb::port::AtomicPointer ptr_;
+    T* ptr_;
 };
 
 template <typename T>
@@ -49,24 +53,28 @@ private:
         node *next;
     };
     node *first;
-    atomic_pointer<node *> divider, last;
+    atomic_pointer<node> divider, last;
 
 public:
-    lockfree_queue() {
+    lockfree_queue() 
+    {
         first = new node(T());
-        divider = atomic_pointer<node*>(first);
-        last = atomic_pointer<node *>(first);
+        divider = atomic_pointer<node>(first);
+        last = atomic_pointer<node>(first);
     }
 
-    ~lockfree_queue() {
-        while (first != 0) {
+    ~lockfree_queue() 
+    {
+        while (first != 0) 
+        {
             node* tmp = first;
             first = tmp->next;
             delete tmp;
         }
     }
 public:
-    void produce(const T& t) {
+    void produce(const T& t) 
+    {
         last.load()->next = new node(t);
         last.store(last.load()->next);
         while (first != divider.load())
@@ -77,7 +85,8 @@ public:
         }
     }
 
-    bool consume(T& result) {
+    bool consume(T& result) 
+    {
         if (divider.load() != last.load())
         {
             result = divider.load()->next->value;
