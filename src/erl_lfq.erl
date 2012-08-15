@@ -64,10 +64,10 @@ len(_Q) ->
 
 queue_test() ->
     {ok, Q} = ?MODULE:new(),
-    ok = ?MODULE:in(Q, <<"foo">>),
-    ok = ?MODULE:in(Q, <<"bar">>),
-    <<"foo">> = ?MODULE:out(Q),
-    <<"bar">> = ?MODULE:out(Q).
+    Q = ?MODULE:in(Q, <<"foo">>),
+    Q = ?MODULE:in(Q, <<"bar">>),
+    {{value, <<"foo">>}, Q} = ?MODULE:out(Q),
+    {{value, <<"bar">>}, Q} = ?MODULE:out(Q).
 
 producer_consumer_test() ->
     {ok, Q} = ?MODULE:new(),
@@ -80,10 +80,9 @@ producer_consumer_test() ->
     end.
 
 consumer_loop(Q, PPid) ->
-    R = ?MODULE:out(Q),
-    case R of
-        <<100000:32/integer>> ->
-            empty = ?MODULE:out(Q),
+    case ?MODULE:out(Q) of
+        {{value, <<100000:32/integer>>}, Q} ->
+            {empty, Q} = ?MODULE:out(Q),
             PPid ! consumer_done,
             done;
         _ ->
@@ -93,7 +92,7 @@ consumer_loop(Q, PPid) ->
 producer_loop(_Q, Count) when Count > 100000 ->
     ok;
 producer_loop(Q, Count) ->    
-    ?MODULE:in(Q, <<Count:32/integer>>),
+    Q = ?MODULE:in(Q, <<Count:32/integer>>),
     producer_loop(Q, Count+1).
 
 -endif.

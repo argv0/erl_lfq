@@ -39,6 +39,7 @@ static ERL_NIF_TERM ATOM_FALSE;
 static ERL_NIF_TERM ATOM_OK;
 static ERL_NIF_TERM ATOM_ERROR;
 static ERL_NIF_TERM ATOM_EMPTY;
+static ERL_NIF_TERM ATOM_VALUE;
 
 static ErlNifFunc nif_funcs[] =
 {
@@ -72,12 +73,13 @@ ERL_NIF_TERM queue_in(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         enif_inspect_binary(env, argv[1], &item))
     {
         ErlNifBinary newbin;
+        ERL_NIF_TERM qref = enif_make_resource(env, handle);
         enif_alloc_binary_compat(env, item.size, &newbin);
         memcpy(newbin.data, item.data, item.size);
         handle->q->produce(newbin);
         __sync_add_and_fetch(&(handle->byte_size), item.size);
         __sync_add_and_fetch(&(handle->item_count), 1);
-        return ATOM_OK;
+        return qref;
     }
     else 
     {
@@ -92,15 +94,16 @@ ERL_NIF_TERM queue_out(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     ErlNifBinary item;
     if (enif_get_resource(env,argv[0],queue_RESOURCE,(void**)&handle));
     {
+        ERL_NIF_TERM qref = enif_make_resource(env, handle);
         if (handle->q->consume(item))
         {
             __sync_sub_and_fetch(&(handle->byte_size), item.size);
             __sync_sub_and_fetch(&(handle->item_count), 1);
-            return enif_make_binary(env, &item);
+            return enif_make_tuple2(env, enif_make_tuple2(env, ATOM_VALUE, enif_make_binary(env, &item)), qref);
         }
         else
         {
-            return ATOM_EMPTY;
+            return enif_make_tuple2(env, ATOM_EMPTY, qref);
         }
     }
     return enif_make_badarg(env);
@@ -148,6 +151,7 @@ static int on_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOM(ATOM_TRUE, "true");
     ATOM(ATOM_FALSE, "false");
     ATOM(ATOM_EMPTY, "empty");
+    ATOM(ATOM_VALUE, "value");
     return 0;
 }
 
