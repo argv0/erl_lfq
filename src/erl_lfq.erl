@@ -44,19 +44,25 @@ init() ->
               end,
     erlang:load_nif(filename:join(PrivDir, ?MODULE), 0).
 
+-type qref() :: binary.
 
+-spec new() -> {ok, qref()}.
 new() ->
     ?nif_stub.
 
+-spec in(qref(), binary()) -> qref().
 in(_Q, _Item) ->
     ?nif_stub.
 
+-spec out(qref()) -> {{value, binary()}, qref()} | {empty, qref()}.
 out(_Q) ->
     ?nif_stub.
 
+-spec byte_size(qref()) -> non_neg_integer().
 byte_size(_Q) ->
     ?nif_stub.
 
+-spec len(qref()) -> non_neg_integer().
 len(_Q) ->
     ?nif_stub.
 
