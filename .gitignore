@@ -1,5 +1,6 @@
 /.eunit
 /c_src/*.o
+/c_src/test_lfq
 /ebin
 /priv
 *~
