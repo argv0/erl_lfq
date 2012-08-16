@@ -44,7 +44,7 @@ class lockfree_queue
          : read_(0),
            write_(0)
      {
-         for (int i=0; i < size; i++)
+         for (std::size_t i=0; i < size; i++)
              array_[i].used = false;
      }
 
