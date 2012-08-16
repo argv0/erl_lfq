@@ -128,5 +128,5 @@ public:
 private:
     node *first_;
     atomic_node_pointer divider_, last_;
-    std::size_t len_;
+    mutable std::size_t len_;
 };
