@@ -4,3 +4,4 @@
 /ebin
 /priv
 *~
+/c_src/*.dSYM
