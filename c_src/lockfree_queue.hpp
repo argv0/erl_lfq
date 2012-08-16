@@ -30,7 +30,8 @@ public:
     }
     inline void store(T* p) 
     {
-        do {
+        do 
+        {
             __sync_val_compare_and_swap(&ptr_, ptr_, p);
         } while(ptr_ != p);
     }
@@ -68,51 +69,53 @@ class lockfree_queue
 private:
     struct node 
     {
-        node(T val) : value(val), next(0) {};
+        node(T val) 
+            : value(val), 
+              next(0) {};
         T value;
         node *next;
     };
-    node *first;
-    PointerType<node> divider, last;
+    typedef PointerType<node> atomic_node_pointer;
+
 public:
     lockfree_queue() 
-    {
-        first = new node(T());
-        divider = PointerType<node>(first);
-        last = PointerType<node>(first);
-    }
+        : first_(new node(T())),
+          divider_(atomic_node_pointer(first_)),
+          last_(atomic_node_pointer(first_)) {}
 
     ~lockfree_queue() 
     {
-        while (first != 0) 
+        while (first_ != 0) 
         {
-            node* tmp = first;
-            first = tmp->next;
+            node* tmp = first_;
+            first_ = tmp->next;
             delete tmp;
         }
     }
 public:
     void produce(const T& t) 
     {
-        last.load()->next = new node(t);
-        last.store(last.load()->next);
-        while (first != divider.load())
+        last_.load()->next = new node(t);
+        last_.store(last_.load()->next);
+        while (first_ != divider_.load())
         {
-            node *tmp = first;
-            first = first->next;
+            node *tmp = first_;
+            first_ = first_->next;
             delete tmp;
         }
     }
 
     bool consume(T& result) 
     {
-        if (divider.load() != last.load())
+        if (divider_.load() != last_.load())
         {
-            result = divider.load()->next->value;
-            divider.store(divider.load()->next);
+            result = divider_.load()->next->value;
+            divider_.store(divider_.load()->next);
             return true;
         }
         return false;
     }
-
+private:
+    node *first_;
+    atomic_node_pointer divider_, last_;
 };
