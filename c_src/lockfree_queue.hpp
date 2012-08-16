@@ -17,6 +17,9 @@
 // under the License.
 //
 // -------------------------------------------------------------------
+#ifndef LOCKFREE_QUEUE_HPP_
+#define LOCKFREE_QUEUE_HPP_
+
 #include <cstddef>
 
 template <typename T>
@@ -83,7 +86,9 @@ public:
     lockfree_queue() 
         : first_(new node(T())),
           divider_(atomic_node_pointer(first_)),
-          last_(atomic_node_pointer(first_)) {}
+          last_(atomic_node_pointer(first_)),
+          len_(0),
+          byte_size_(0) {}
 
     ~lockfree_queue() 
     {
@@ -100,6 +105,7 @@ public:
         last_.load()->next = new node(t);
         last_.store(last_.load()->next);
         __sync_add_and_fetch(&len_, 1);
+        //__sync_add_and_fetch(&byte_size_, t.size);
         while (first_ != divider_.load())
         {
             node *tmp = first_;
@@ -115,6 +121,7 @@ public:
             result = divider_.load()->next->value;
             divider_.store(divider_.load()->next);
             __sync_sub_and_fetch(&len_, 1);
+            //__sync_sub_and_fetch(&byte_size_, result.size);
             return true;
         }
         return false;
@@ -129,4 +136,7 @@ private:
     node *first_;
     atomic_node_pointer divider_, last_;
     mutable std::size_t len_;
+    mutable std::size_t byte_size_;
 };
+
+#endif // include guard
