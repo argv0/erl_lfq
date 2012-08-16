@@ -30,15 +30,16 @@ class lockfree_queue
 {
     typedef T item_type;
     typedef int index_type;
-
-     struct slot
-     {
+    
+    struct slot
+    {
          item_type item;
          boost::atomic_bool used;
-     };
-     slot array_[size];
-     int  read_;
-     int  write_;
+    };
+    slot array_[size];
+    int  read_;
+    int  write_;
+    boost::atomic_ulong len_;
  public:
      lockfree_queue() 
          : read_(0),
@@ -62,6 +63,7 @@ class lockfree_queue
         index_type rd = read_;
         slot *p = &(array_[rd % size]);
         p->used.store(0, boost::memory_order_release);
+        len_.fetch_sub(1, boost::memory_order_release);
         read_++;
     }
 
@@ -78,7 +80,8 @@ class lockfree_queue
     {
         index_type wr = write_;
         slot *p = &(array_[wr % size]);
-        p->used.store(1, boost::memory_order_release);
+        p->used.store(true, boost::memory_order_release);
+        len_.fetch_add(1, boost::memory_order_release);
         write_++;
     }
     
@@ -102,7 +105,10 @@ class lockfree_queue
         return true;
     }
 
-    std::size_t len() { return 0; }
+    std::size_t len() 
+    { 
+        return len_.load(boost::memory_order_consume);
+    }
     
  };
 
