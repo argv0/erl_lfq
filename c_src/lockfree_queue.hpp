@@ -17,6 +17,8 @@
 // under the License.
 //
 // -------------------------------------------------------------------
+#include <cstddef>
+
 template <typename T>
 class cas_pointer
 {
@@ -97,6 +99,7 @@ public:
     {
         last_.load()->next = new node(t);
         last_.store(last_.load()->next);
+        __sync_add_and_fetch(&len_, 1);
         while (first_ != divider_.load())
         {
             node *tmp = first_;
@@ -111,11 +114,19 @@ public:
         {
             result = divider_.load()->next->value;
             divider_.store(divider_.load()->next);
+            __sync_sub_and_fetch(&len_, 1);
             return true;
         }
         return false;
     }
+    
+    std::size_t len() const
+    {
+        return __sync_fetch_and_add(&len_, 0);
+    }
+    
 private:
     node *first_;
     atomic_node_pointer divider_, last_;
+    std::size_t len_;
 };

@@ -29,9 +29,7 @@ struct queue_handle
 {
     lockfree_queue<ErlNifBinary> *q;
     uint64_t byte_size;
-    uint64_t item_count;
 };
-
 
 // Atoms (initialized in on_load)
 static ERL_NIF_TERM ATOM_TRUE;
@@ -78,7 +76,6 @@ ERL_NIF_TERM queue_in(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         memcpy(newbin.data, item.data, item.size);
         handle->q->produce(newbin);
         __sync_add_and_fetch(&(handle->byte_size), item.size);
-        __sync_add_and_fetch(&(handle->item_count), 1);
         return qref;
     }
     else 
@@ -98,7 +95,6 @@ ERL_NIF_TERM queue_out(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         if (handle->q->consume(item))
         {
             __sync_sub_and_fetch(&(handle->byte_size), item.size);
-            __sync_sub_and_fetch(&(handle->item_count), 1);
             return enif_make_tuple2(env, enif_make_tuple2(env, ATOM_VALUE, enif_make_binary(env, &item)), qref);
         }
         else
@@ -124,7 +120,7 @@ ERL_NIF_TERM queue_len(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     queue_handle *handle = 0;
     if (enif_get_resource(env,argv[0],queue_RESOURCE,(void**)&handle));
     {
-        return enif_make_uint64(env, __sync_fetch_and_add(&(handle->item_count), 0));
+        return enif_make_uint64(env, handle->q->len());
     }
     return enif_make_badarg(env);
 }
