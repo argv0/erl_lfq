@@ -9,7 +9,7 @@ test-compile:
 
 test: compile test-compile
 	./rebar eunit
-	@time c_src/test_lfq
+	time c_src/test_lfq
 
 test-clean:
 	rm -f c_src/test_lfq

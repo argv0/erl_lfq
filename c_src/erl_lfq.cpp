@@ -23,12 +23,17 @@
 #include <stdio.h>
 #include <stdint.h>
 
+template <>
+std::size_t item_size<ErlNifBinary*>(ErlNifBinary* item)
+{
+    return item->size;
+}
+
 static ErlNifResourceType* queue_RESOURCE;
 
 struct queue_handle
 {
     lockfree_queue<ErlNifBinary> *q;
-    uint64_t byte_size;
 };
 
 // Atoms (initialized in on_load)
@@ -75,7 +80,6 @@ ERL_NIF_TERM queue_in(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         enif_alloc_binary_compat(env, item.size, &newbin);
         memcpy(newbin.data, item.data, item.size);
         handle->q->produce(newbin);
-        __sync_add_and_fetch(&(handle->byte_size), item.size);
         return qref;
     }
     else 
@@ -94,7 +98,6 @@ ERL_NIF_TERM queue_out(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         ERL_NIF_TERM qref = enif_make_resource(env, handle);
         if (handle->q->consume(item))
         {
-            __sync_sub_and_fetch(&(handle->byte_size), item.size);
             return enif_make_tuple2(env, enif_make_tuple2(env, ATOM_VALUE, enif_make_binary(env, &item)), qref);
         }
         else
@@ -110,7 +113,7 @@ ERL_NIF_TERM queue_byte_size(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]
     queue_handle *handle = 0;
     if (enif_get_resource(env,argv[0],queue_RESOURCE,(void**)&handle));
     {
-        return enif_make_uint64(env, __sync_fetch_and_add(&(handle->byte_size), 0));
+        return enif_make_uint64(env, handle->q->byte_size());
     }
     return enif_make_badarg(env);
 }

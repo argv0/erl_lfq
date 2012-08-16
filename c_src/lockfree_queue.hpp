@@ -25,6 +25,11 @@
 #include <cstdio>
 #include <boost/atomic.hpp>
 
+template <typename T> std::size_t item_size(T item) { return sizeof(item); }
+
+
+//std::size_t item_size(int item) { return sizeof(item); }
+
 template <typename T, size_t size=1000000>
 class lockfree_queue
 {
@@ -37,13 +42,14 @@ class lockfree_queue
          boost::atomic_bool used;
     };
     slot array_[size];
-    int  read_;
-    int  write_;
-    boost::atomic_ulong len_;
+    int  read_, write_;
+    boost::atomic_ulong len_, byte_size_;
  public:
      lockfree_queue() 
          : read_(0),
-           write_(0)
+           write_(0),
+           len_(0),
+           byte_size_(0)
      {
          for (std::size_t i=0; i < size; i++)
              array_[i].used = false;
@@ -62,8 +68,9 @@ class lockfree_queue
     {
         index_type rd = read_;
         slot *p = &(array_[rd % size]);
-        p->used.store(0, boost::memory_order_release);
+        p->used.store(false, boost::memory_order_release);
         len_.fetch_sub(1, boost::memory_order_release);
+        byte_size_.fetch_sub(item_size(p->item), boost::memory_order_release);
         read_++;
     }
 
@@ -82,6 +89,7 @@ class lockfree_queue
         slot *p = &(array_[wr % size]);
         p->used.store(true, boost::memory_order_release);
         len_.fetch_add(1, boost::memory_order_release);
+        byte_size_.fetch_add(item_size(p->item), boost::memory_order_release);
         write_++;
     }
     
@@ -105,11 +113,15 @@ class lockfree_queue
         return true;
     }
 
-    std::size_t len() 
+    std::size_t len() const
     { 
         return len_.load(boost::memory_order_consume);
     }
     
+    std::size_t byte_size() const
+    {
+        return byte_size_.load(boost::memory_order_consume);
+    }
  };
 
 #endif // include guard

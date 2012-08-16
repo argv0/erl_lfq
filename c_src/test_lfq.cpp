@@ -61,7 +61,8 @@ void* consumer(void *p)
     for (unsigned long i=0; i < NITEMS; ++i)
     {
         while (!q->consume(j)) {}
-        consumer_total += j;    }
+        consumer_total += j;  
+    }
     return 0;
 }
 
