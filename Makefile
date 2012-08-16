@@ -5,7 +5,7 @@ compile:
 	./rebar compile
 
 test-compile:
-	$(CXX) c_src/test_lfq.cpp -o c_src/test_lfq
+	$(CXX) c_src/test_lfq.cpp -o c_src/test_lfq -lpthread
 
 test: compile test-compile
 	./rebar eunit
