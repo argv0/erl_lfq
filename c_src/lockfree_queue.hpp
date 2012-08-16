@@ -62,7 +62,7 @@ private:
     T* ptr_;
 };
 
-template <typename T, template <class> class PointerType=cas_pointer>
+template <typename T, template <class> class PointerType=barrier_pointer>
 class lockfree_queue
 {
 private:
