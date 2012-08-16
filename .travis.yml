@@ -1,6 +1,7 @@
 notifications:
   email: andy@basho.com
 language: erlang
+script: "make clean all test"
 otp_release:
    - R15B01
    - R15B
