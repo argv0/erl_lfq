@@ -17,15 +17,33 @@
 // under the License.
 //
 // -------------------------------------------------------------------
-
-inline void memory_barrier() { __sync_synchronize(); }
-
 template <typename T>
-class atomic_pointer
+class cas_pointer
 {
 public:
-    atomic_pointer() {}
-    explicit atomic_pointer(T* p) : ptr_(p) {}
+    cas_pointer() {}
+    explicit cas_pointer(T* p) : ptr_(p) {}
+public:
+    inline T* load() const 
+    { 
+        return __sync_fetch_and_add(&ptr_, 0);
+    }
+    inline void store(T* p) 
+    {
+        do {
+            __sync_val_compare_and_swap(&ptr_, ptr_, p);
+        } while(ptr_ != p);
+    }
+private:
+    mutable T* ptr_;
+};
+
+template <typename T>
+class barrier_pointer
+{
+public:
+    barrier_pointer() {}
+    explicit barrier_pointer(T* p) : ptr_(p) {}
 public:
     inline T* load() const 
     { 
@@ -39,10 +57,12 @@ public:
         ptr_ = p;
     }
 private:
+    void memory_barrier() const { __sync_synchronize(); }
+private:
     T* ptr_;
 };
 
-template <typename T>
+template <typename T, template <class> class PointerType=cas_pointer>
 class lockfree_queue
 {
 private:
@@ -53,14 +73,13 @@ private:
         node *next;
     };
     node *first;
-    atomic_pointer<node> divider, last;
-
+    PointerType<node> divider, last;
 public:
     lockfree_queue() 
     {
         first = new node(T());
-        divider = atomic_pointer<node>(first);
-        last = atomic_pointer<node>(first);
+        divider = PointerType<node>(first);
+        last = PointerType<node>(first);
     }
 
     ~lockfree_queue() 
@@ -95,4 +114,5 @@ public:
         }
         return false;
     }
+
 };
