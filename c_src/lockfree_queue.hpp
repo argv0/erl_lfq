@@ -25,7 +25,7 @@
 #include <cstdio>
 #include <boost/atomic.hpp>
 
-// override this for queue item types to calculate total byte size of queue
+// specialize this for queue item types to calculate total byte size of queue
 template <typename T> std::size_t item_size(T item) { return sizeof(item); }
 
 template <typename T, size_t size=1000000>
