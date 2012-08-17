@@ -32,22 +32,23 @@ template <typename T, size_t size=1000000>
 class lockfree_queue
 {
     typedef T item_type;
-    typedef int index_type;
+    typedef std::size_t index_type;
     
     struct slot
     {
          item_type item;
          boost::atomic_bool used;
     };
-    slot array_[size];
-    int  read_, write_;
+
+    slot storage_[size];
+    std::size_t read_, write_;
     boost::atomic_ulong len_, byte_size_;
 public: // construction
      lockfree_queue() 
          : read_(0),
            write_(0),
            len_(0),
-           byte_size_(0)
+           byte_size_(0) 
      {
          for (std::size_t i=0; i < size; i++)
              array_[i].used = false;
