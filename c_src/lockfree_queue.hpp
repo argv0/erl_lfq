@@ -42,7 +42,7 @@ class lockfree_queue
     slot array_[size];
     int  read_, write_;
     boost::atomic_ulong len_, byte_size_;
- public:
+public: // construction
      lockfree_queue() 
          : read_(0),
            write_(0),
@@ -52,7 +52,37 @@ class lockfree_queue
          for (std::size_t i=0; i < size; i++)
              array_[i].used = false;
      }
+public:  // api
+    bool produce(const T& t)
+    {
+        T* item = write_prepare();
+        if (!item)
+            return false;
+        *item = t;
+        write_publish();
+        return true;
+    }
 
+    bool consume(T& result)
+    {
+        T* item = read_fetch();
+        if (!item)
+            return false;
+        result = *item;
+        read_consume();
+        return true;
+    }
+
+    std::size_t len() const
+    { 
+        return len_.load(boost::memory_order_consume);
+    }
+    
+    std::size_t byte_size() const
+    {
+        return byte_size_.load(boost::memory_order_consume);
+    }
+protected: // fetch / publish primitives
     T* read_fetch()
     {
         index_type rd = read_;
@@ -91,36 +121,7 @@ class lockfree_queue
         write_++;
     }
     
-    bool produce(const T& t)
-    {
-        T* item = write_prepare();
-        if (!item)
-            return false;
-        *item = t;
-        write_publish();
-        return true;
-    }
-
-    bool consume(T& result)
-    {
-        T* item = read_fetch();
-        if (!item)
-            return false;
-        result = *item;
-        read_consume();
-        return true;
-    }
-
-    std::size_t len() const
-    { 
-        return len_.load(boost::memory_order_consume);
-    }
-    
-    std::size_t byte_size() const
-    {
-        return byte_size_.load(boost::memory_order_consume);
-    }
-private:
+private: // noncopyable
     lockfree_queue( const lockfree_queue& );
     const lockfree_queue& operator=( const lockfree_queue& );
 };
