@@ -25,7 +25,7 @@
 #include <string.h>
 #include <assert.h>
 
-lockfree_queue<unsigned long, 20000000> *q = 0;
+basho::lockfree_queue<unsigned long, 20000000> *q = 0;
 unsigned long producer_total = 0;
 unsigned long consumer_total = 0;
 unsigned long NITEMS = 20000000;
@@ -68,7 +68,7 @@ void* consumer(void *p)
 
 int test_lfq()
 {
-    q = new lockfree_queue<unsigned long, 20000000>();
+    q = new basho::lockfree_queue<unsigned long, 20000000>();
     pthread_t t1 = spawn(producer);
     pthread_t t2 = spawn(consumer);
     join(t1);

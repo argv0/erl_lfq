@@ -23,17 +23,22 @@
 #include <stdio.h>
 #include <stdint.h>
 
+namespace basho { 
+
+// specialization so that lockfree_queue can obtain the size of an ErlNifBinary
 template <>
 std::size_t item_size<ErlNifBinary*>(ErlNifBinary* item)
 {
     return item->size;
 }
 
+} // namespace basho
+
 static ErlNifResourceType* queue_RESOURCE;
 
 struct queue_handle
 {
-    lockfree_queue<ErlNifBinary> *q;
+    basho::lockfree_queue<ErlNifBinary> *q;
 };
 
 // Atoms (initialized in on_load)
@@ -63,7 +68,7 @@ ERL_NIF_TERM queue_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         (queue_handle *)enif_alloc_resource_compat(env, queue_RESOURCE,
                                                    sizeof(queue_handle));
     memset(handle, '\0', sizeof(queue_handle));
-    handle->q = new lockfree_queue<ErlNifBinary>();
+    handle->q = new basho::lockfree_queue<ErlNifBinary>();
     ERL_NIF_TERM result = enif_make_resource(env, handle);
     enif_release_resource_compat(env, handle);
     return enif_make_tuple2(env, ATOM_OK, result);

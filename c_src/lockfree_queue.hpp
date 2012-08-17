@@ -25,6 +25,8 @@
 #include <cstdio>
 #include <boost/atomic.hpp>
 
+namespace basho {
+
 // specialize this for queue item types to calculate total byte size of queue
 template <typename T> std::size_t item_size(T item) { return sizeof(item); }
 
@@ -126,5 +128,7 @@ private: // noncopyable
     lockfree_queue( const lockfree_queue& );
     const lockfree_queue& operator=( const lockfree_queue& );
 };
+
+} // namespace basho
 
 #endif // include guard
