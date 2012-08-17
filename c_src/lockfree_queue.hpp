@@ -20,123 +20,111 @@
 #ifndef LOCKFREE_QUEUE_HPP_
 #define LOCKFREE_QUEUE_HPP_
 
+
 #include <cstddef>
+#include <cstdio>
+#include <boost/atomic.hpp>
 
-template <typename T>
-class cas_pointer
-{
-public:
-    cas_pointer() {}
-    explicit cas_pointer(T* p) : ptr_(p) {}
-public:
-    inline T* load() const 
-    { 
-        return __sync_fetch_and_add(&ptr_, 0);
-    }
-    inline void store(T* p) 
-    {
-        do 
-        {
-            __sync_val_compare_and_swap(&ptr_, ptr_, p);
-        } while(ptr_ != p);
-    }
-private:
-    mutable T* ptr_;
-};
+// specialize this for queue item types to calculate total byte size of queue
+template <typename T> std::size_t item_size(T item) { return sizeof(item); }
 
-template <typename T>
-class barrier_pointer
-{
-public:
-    barrier_pointer() {}
-    explicit barrier_pointer(T* p) : ptr_(p) {}
-public:
-    inline T* load() const 
-    { 
-        T* result = ptr_;
-        memory_barrier();
-        return result;
-    }
-    inline void store(T* p) 
-    {
-        memory_barrier();
-        ptr_ = p;
-    }
-private:
-    void memory_barrier() const { __sync_synchronize(); }
-private:
-    T* ptr_;
-};
-
-template <typename T, template <class> class PointerType=barrier_pointer>
+template <typename T, size_t size=1000000>
 class lockfree_queue
 {
-private:
-    struct node 
+    typedef T item_type;
+    typedef std::size_t index_type;
+    
+    struct slot
     {
-        node(T val) 
-            : value(val), 
-              next(0) {};
-        T value;
-        node *next;
+         item_type item;
+         boost::atomic_bool used;
     };
-    typedef PointerType<node> atomic_node_pointer;
 
-public:
-    lockfree_queue() 
-        : first_(new node(T())),
-          divider_(atomic_node_pointer(first_)),
-          last_(atomic_node_pointer(first_)),
-          len_(0),
-          byte_size_(0) {}
-
-    ~lockfree_queue() 
+    slot storage_[size];
+    std::size_t read_, write_;
+    boost::atomic_ulong len_, byte_size_;
+public: // construction
+     lockfree_queue() 
+         : read_(0),
+           write_(0),
+           len_(0),
+           byte_size_(0) 
+     {
+         for (std::size_t i=0; i < size; i++)
+             storage_[i].used = false;
+     }
+public:  // api
+    bool produce(const T& t)
     {
-        while (first_ != 0) 
-        {
-            node* tmp = first_;
-            first_ = tmp->next;
-            delete tmp;
-        }
-    }
-public:
-    void produce(const T& t) 
-    {
-        last_.load()->next = new node(t);
-        last_.store(last_.load()->next);
-        __sync_add_and_fetch(&len_, 1);
-        //__sync_add_and_fetch(&byte_size_, t.size);
-        while (first_ != divider_.load())
-        {
-            node *tmp = first_;
-            first_ = first_->next;
-            delete tmp;
-        }
+        T* item = write_prepare();
+        if (!item)
+            return false;
+        *item = t;
+        write_publish();
+        return true;
     }
 
-    bool consume(T& result) 
+    bool consume(T& result)
     {
-        if (divider_.load() != last_.load())
-        {
-            result = divider_.load()->next->value;
-            divider_.store(divider_.load()->next);
-            __sync_sub_and_fetch(&len_, 1);
-            //__sync_sub_and_fetch(&byte_size_, result.size);
-            return true;
-        }
-        return false;
+        T* item = read_fetch();
+        if (!item)
+            return false;
+        result = *item;
+        read_consume();
+        return true;
     }
-    
+
     std::size_t len() const
-    {
-        return __sync_fetch_and_add(&len_, 0);
+    { 
+        return len_.load(boost::memory_order_consume);
     }
     
-private:
-    node *first_;
-    atomic_node_pointer divider_, last_;
-    mutable std::size_t len_;
-    mutable std::size_t byte_size_;
+    std::size_t byte_size() const
+    {
+        return byte_size_.load(boost::memory_order_consume);
+    }
+protected: // fetch / publish primitives
+    T* read_fetch()
+    {
+        index_type rd = read_;
+        slot* p = &(storage_[rd % size]);
+        if (! p->used.load(boost::memory_order_acquire))
+            return 0;
+        return &(p->item);
+    }
+    
+    void read_consume()
+    {
+        index_type rd = read_;
+        slot *p = &(storage_[rd % size]);
+        p->used.store(false, boost::memory_order_release);
+        len_.fetch_sub(1, boost::memory_order_release);
+        byte_size_.fetch_sub(item_size(p->item), boost::memory_order_release);
+        read_++;
+    }
+
+    T* write_prepare()
+    {
+        index_type wr = write_;
+        slot *p = &(storage_[wr % size]);
+        if (p->used.load(boost::memory_order_acquire))
+            return 0;
+        return &(p->item);
+    }
+
+    void write_publish()
+    {
+        index_type wr = write_;
+        slot *p = &(storage_[wr % size]);
+        p->used.store(true, boost::memory_order_release);
+        len_.fetch_add(1, boost::memory_order_release);
+        byte_size_.fetch_add(item_size(p->item), boost::memory_order_release);
+        write_++;
+    }
+    
+private: // noncopyable
+    lockfree_queue( const lockfree_queue& );
+    const lockfree_queue& operator=( const lockfree_queue& );
 };
 
 #endif // include guard
