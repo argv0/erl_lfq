@@ -50,7 +50,7 @@ init() ->
 new() ->
     ?nif_stub.
 
--spec in(qref(), binary()) -> qref().
+-spec in(qref(), binary()) -> qref() | {full, qref()}
 in(_Q, _Item) ->
     ?nif_stub.
 

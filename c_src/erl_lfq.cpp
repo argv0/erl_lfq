@@ -43,6 +43,7 @@ static ERL_NIF_TERM ATOM_OK;
 static ERL_NIF_TERM ATOM_ERROR;
 static ERL_NIF_TERM ATOM_EMPTY;
 static ERL_NIF_TERM ATOM_VALUE;
+static ERL_NIF_TERM ATOM_FULL;
 
 static ErlNifFunc nif_funcs[] =
 {
@@ -79,8 +80,14 @@ ERL_NIF_TERM queue_in(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         ERL_NIF_TERM qref = enif_make_resource(env, handle);
         enif_alloc_binary_compat(env, item.size, &newbin);
         memcpy(newbin.data, item.data, item.size);
-        handle->q->produce(newbin);
-        return qref;
+        if (handle->q->produce(newbin))
+        {
+            return qref;
+        }
+        else
+        {
+            return enif_make_tuple2(env, ATOM_FULL, qref);
+        }
     }
     else 
     {
@@ -150,6 +157,7 @@ static int on_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOM(ATOM_TRUE, "true");
     ATOM(ATOM_FALSE, "false");
     ATOM(ATOM_EMPTY, "empty");
+    ATOM(ATOM_FULL, "full");
     ATOM(ATOM_VALUE, "value");
     return 0;
 }
