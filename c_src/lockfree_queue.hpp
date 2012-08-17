@@ -25,10 +25,8 @@
 #include <cstdio>
 #include <boost/atomic.hpp>
 
+// override this for queue item types to calculate total byte size of queue
 template <typename T> std::size_t item_size(T item) { return sizeof(item); }
-
-
-//std::size_t item_size(int item) { return sizeof(item); }
 
 template <typename T, size_t size=1000000>
 class lockfree_queue
@@ -122,6 +120,9 @@ class lockfree_queue
     {
         return byte_size_.load(boost::memory_order_consume);
     }
- };
+private:
+    lockfree_queue( const lockfree_queue& );
+    const lockfree_queue& operator=( const lockfree_queue& );
+};
 
 #endif // include guard
