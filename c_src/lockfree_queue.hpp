@@ -36,13 +36,19 @@ class lockfree_queue
     
     struct slot
     {
-         item_type item;
-         boost::atomic_bool used;
+        item_type item;
+        boost::atomic_int used;
     };
-
+    char pad0_[64];
     slot storage_[size];
-    std::size_t read_, write_;
-    boost::atomic_ulong len_, byte_size_;
+    std::size_t read_;
+    char pad1_[64];
+    std::size_t write_;
+    char pad2_[64];
+    boost::atomic<size_t> len_;
+    char pad3_[64];
+    boost::atomic<size_t> byte_size_;
+    char pad4_[64];
 public: // construction
      lockfree_queue() 
          : read_(0),
@@ -121,7 +127,6 @@ protected: // fetch / publish primitives
         byte_size_.fetch_add(item_size(p->item), boost::memory_order_release);
         write_++;
     }
-    
 private: // noncopyable
     lockfree_queue( const lockfree_queue& );
     const lockfree_queue& operator=( const lockfree_queue& );
