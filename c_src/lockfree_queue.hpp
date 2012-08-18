@@ -28,7 +28,7 @@
 //// specialize this for queue item types to calculate total byte size of queue
 template <typename T> std::size_t item_size(T item) { return sizeof(item); }
 
-template <typename T, size_t size=1000000>
+template <typename T>
 class lockfree_queue
 {
     typedef T item_type;
@@ -40,7 +40,8 @@ class lockfree_queue
         boost::atomic_int used;
     };
     char pad0_[64];
-    slot storage_[size];
+    std::size_t size_;
+    slot* const storage_;
     std::size_t read_;
     char pad1_[64];
     std::size_t write_;
@@ -50,13 +51,15 @@ class lockfree_queue
     boost::atomic<size_t> byte_size_;
     char pad4_[64];
 public: // construction
-     lockfree_queue() 
-         : read_(0),
+    lockfree_queue(std::size_t size) 
+        : size_(size),
+           storage_(new slot[size_]),
+           read_(0),
            write_(0),
            len_(0),
            byte_size_(0) 
      {
-         for (std::size_t i=0; i < size; i++)
+         for (std::size_t i=0; i < size_; i++)
              storage_[i].used = 0;
      }
 public:  // api
@@ -93,7 +96,7 @@ protected: // fetch / publish primitives
     T* read_fetch()
     {
         index_type rd = read_;
-        slot* p = &(storage_[rd % size]);
+        slot* p = &(storage_[rd % size_]);
         if (! p->used.load(boost::memory_order_acquire))
             return 0;
         return &(p->item);
@@ -102,7 +105,7 @@ protected: // fetch / publish primitives
     void read_consume()
     {
         index_type rd = read_;
-        slot *p = &(storage_[rd % size]);
+        slot *p = &(storage_[rd % size_]);
         p->used.store(0, boost::memory_order_release);
         len_.fetch_sub(1, boost::memory_order_release);
         byte_size_.fetch_sub(item_size(p->item), boost::memory_order_release);
@@ -112,7 +115,7 @@ protected: // fetch / publish primitives
     T* write_prepare()
     {
         index_type wr = write_;
-        slot *p = &(storage_[wr % size]);
+        slot *p = &(storage_[wr % size_]);
         if (p->used.load(boost::memory_order_acquire))
             return 0;
         return &(p->item);
@@ -121,7 +124,7 @@ protected: // fetch / publish primitives
     void write_publish()
     {
         index_type wr = write_;
-        slot *p = &(storage_[wr % size]);
+        slot *p = &(storage_[wr % size_]);
         p->used.store(1, boost::memory_order_release);
         len_.fetch_add(1, boost::memory_order_release);
         byte_size_.fetch_add(item_size(p->item), boost::memory_order_release);

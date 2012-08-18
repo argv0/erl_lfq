@@ -62,7 +62,7 @@ ERL_NIF_TERM queue_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         (queue_handle *)enif_alloc_resource_compat(env, queue_RESOURCE,
                                                    sizeof(queue_handle));
     memset(handle, '\0', sizeof(queue_handle));
-    handle->q = new lockfree_queue<ErlNifBinary>();
+    handle->q = new lockfree_queue<ErlNifBinary>(2000000);
     ERL_NIF_TERM result = enif_make_resource(env, handle);
     enif_release_resource_compat(env, handle);
     return enif_make_tuple2(env, ATOM_OK, result);
@@ -77,6 +77,7 @@ ERL_NIF_TERM queue_in(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     {
         ErlNifBinary newbin;
         ERL_NIF_TERM qref = enif_make_resource(env, handle);
+        //
         enif_alloc_binary_compat(env, item.size, &newbin);
         memcpy(newbin.data, item.data, item.size);
         handle->q->produce(newbin);
@@ -144,6 +145,8 @@ static int on_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
                                                     &queue_resource_cleanup,
                                                     flags, 
                                                     NULL);
+    if (!queue_RESOURCE)
+        return 0;
     // Initialize common atoms
     ATOM(ATOM_OK, "ok");
     ATOM(ATOM_ERROR, "error");
