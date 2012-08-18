@@ -25,7 +25,7 @@
 #include <cstdio>
 #include <boost/atomic.hpp>
 
-// specialize this for queue item types to calculate total byte size of queue
+//// specialize this for queue item types to calculate total byte size of queue
 template <typename T> std::size_t item_size(T item) { return sizeof(item); }
 
 template <typename T, size_t size=1000000>
@@ -57,7 +57,7 @@ public: // construction
            byte_size_(0) 
      {
          for (std::size_t i=0; i < size; i++)
-             storage_[i].used = false;
+             storage_[i].used = 0;
      }
 public:  // api
     bool produce(const T& t)
@@ -103,7 +103,7 @@ protected: // fetch / publish primitives
     {
         index_type rd = read_;
         slot *p = &(storage_[rd % size]);
-        p->used.store(false, boost::memory_order_release);
+        p->used.store(0, boost::memory_order_release);
         len_.fetch_sub(1, boost::memory_order_release);
         byte_size_.fetch_sub(item_size(p->item), boost::memory_order_release);
         read_++;
@@ -122,7 +122,7 @@ protected: // fetch / publish primitives
     {
         index_type wr = write_;
         slot *p = &(storage_[wr % size]);
-        p->used.store(true, boost::memory_order_release);
+        p->used.store(1, boost::memory_order_release);
         len_.fetch_add(1, boost::memory_order_release);
         byte_size_.fetch_add(item_size(p->item), boost::memory_order_release);
         write_++;
