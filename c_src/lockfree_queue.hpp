@@ -39,9 +39,9 @@ class lockfree_queue
         item_type item;
         boost::atomic_int used;
     };
-    char pad0_[64];
     std::size_t size_;
     slot* const storage_;
+    char pad0_[64-sizeof(size_t)-sizeof(slot *)];
     std::size_t read_;
     char pad1_[64];
     std::size_t write_;
@@ -52,7 +52,7 @@ class lockfree_queue
     char pad4_[64];
 public: // construction
     lockfree_queue(std::size_t size) 
-        : size_(size),
+        :  size_(size),
            storage_(new slot[size_]),
            read_(0),
            write_(0),
@@ -62,6 +62,10 @@ public: // construction
          for (std::size_t i=0; i < size_; i++)
              storage_[i].used = 0;
      }
+    ~lockfree_queue() 
+    {
+        delete[] storage_;
+    }
 public:  // api
     bool produce(const T& t)
     {
