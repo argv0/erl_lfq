@@ -44,7 +44,7 @@ init() ->
               end,
     erlang:load_nif(filename:join(PrivDir, ?MODULE), 0).
 
--type qref() :: binary.
+-type qref() :: binary().
 
 -spec new() -> {ok, qref()}.
 new() ->
