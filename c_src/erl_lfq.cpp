@@ -24,9 +24,9 @@
 #include <stdint.h>
 
 template <>
-std::size_t item_size<ErlNifBinary*>(ErlNifBinary* item)
+std::size_t item_size<ErlNifBinary>(ErlNifBinary item)
 {
-    return item->size;
+    return item.size;
 }
 
 static ErlNifResourceType* queue_RESOURCE;
