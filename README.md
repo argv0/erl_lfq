@@ -1,6 +1,8 @@
 erl_lfq
 =======
 
+[![Build Status](https://secure.travis-ci.org/argv0/erl_lfq.png)](http://travis-ci.org/argv0/erl_lfq)
+
 erl_lfq is a lock-free, single-producer, single-consumer FIFO queue for Erlang binaries,
 implemented in C++ and wrapped in a NIF.  
 
