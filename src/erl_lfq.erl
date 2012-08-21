@@ -72,8 +72,12 @@ queue_test() ->
     {ok, Q} = ?MODULE:new(),
     Q = ?MODULE:in(Q, <<"foo">>),
     Q = ?MODULE:in(Q, <<"bar">>),
+    6 = ?MODULE:byte_size(Q),
+    2 = ?MODULE:len(Q),
     {{value, <<"foo">>}, Q} = ?MODULE:out(Q),
-    {{value, <<"bar">>}, Q} = ?MODULE:out(Q).
+    {{value, <<"bar">>}, Q} = ?MODULE:out(Q),
+    0 = ?MODULE:byte_size(Q).
+    
 
 producer_consumer_test() ->
     {ok, Q} = ?MODULE:new(),
